@@ -33,8 +33,9 @@ let game = { topic: null, question: null, answered: false, monster: null };
 // ---------- 出題來源（本地即時 + AI 預取） ----------
 let prefetched = null; // { topicId, difficulty, promise }
 
+// 背景預取下一題（兩個道館都用 AI 出題，預取令「繼續冒險」幾乎即時）
 function startPrefetch(topic, difficulty) {
-  if (!topic || topic.id === 'fraction-calc') return; // 本地題免預取
+  if (!topic) return;
   prefetched = {
     topicId: topic.id,
     difficulty,
@@ -43,15 +44,21 @@ function startPrefetch(topic, difficulty) {
 }
 
 async function takeQuestion(topic, difficulty) {
-  if (topic.id === 'fraction-calc') return genFraction(difficulty); // 本地、零等待
+  // 預取命中：通常已備好，立即可用
   if (prefetched && prefetched.topicId === topic.id && prefetched.difficulty === difficulty) {
     const p = prefetched.promise;
     prefetched = null;
     const q = await p;
-    if (q) return q; // 預取命中：通常已備好，立即可用
+    if (q) return q;
   }
   prefetched = null;
-  return generateQuestion(topic, difficulty);
+  // AI 出題（qwen-turbo）；分數計算題在 AI 失敗時用本地題機作後備
+  try {
+    return await generateQuestion(topic, difficulty);
+  } catch (e) {
+    if (topic.id === 'fraction-calc') return genFraction(difficulty);
+    throw e;
+  }
 }
 
 // ---------- 畫面切換 ----------
@@ -183,36 +190,37 @@ async function submitAnswer() {
   const ans = ($('#ans-input')?.value || '').trim();
   if (!ans) { flashHint('先輸入答案，再丟精靈球！'); return; }
 
-  // 1) 本地即時批改（數值題）——零等待
+  // 本地數值比對（即時、可靠）：true/false 代表能判斷，null 代表交給 AI
   const local = localGrade(ans, game.question.answer);
-  if (local !== null) {
-    game.answered = true;
-    $('#monster-emoji').classList.remove('shake');
-    applyResult({
-      correct: local,
-      feedback: local ? '計算正確，做得好！' : `正確答案是 ${game.question.answer}，看看下面的解法。`,
-      solution: game.question.solution || '',
-    });
-    return;
-  }
 
-  // 2) 無法本地判斷（如文字題）→ 用 AI（較快的模型）批改
   $('#submit-btn').disabled = true;
   $('#submit-btn').textContent = '丟出精靈球…';
   $('#monster-emoji').classList.add('shake');
   try {
+    // AI 對答案（qwen-turbo）：負責寫回饋與解說
     const r = await gradeAnswer(game.topic, game.question, ans);
+    // 數值題以本地判斷為準（等值更可靠），文字題用 AI 判斷
+    const correct = local !== null ? local : r.correct;
     game.answered = true;
-    applyResult(r);
+    applyResult({ correct, feedback: r.feedback, solution: r.solution || game.question.solution || '' });
   } catch (e) {
-    // AI 一時繁忙：友善退場，顯示參考答案，不扣難度
     game.answered = true;
     $('#monster-emoji').classList.remove('shake');
-    applyResult({
-      neutral: true,
-      feedback: 'AI 老師一時繁忙，先看看參考答案吧！',
-      solution: `參考答案：${game.question.answer || ''}\n${game.question.solution || ''}`,
-    });
+    if (local !== null) {
+      // AI 繁忙但本地能判斷：照常結算，不影響適性
+      applyResult({
+        correct: local,
+        feedback: local ? '計算正確，做得好！' : `正確答案是 ${game.question.answer}，看看下面的解法。`,
+        solution: game.question.solution || '',
+      });
+    } else {
+      // 完全無法判斷：友善退場，顯示參考答案，不扣難度
+      applyResult({
+        neutral: true,
+        feedback: 'AI 老師一時繁忙，先看看參考答案吧！',
+        solution: `參考答案：${game.question.answer || ''}\n${game.question.solution || ''}`,
+      });
+    }
   } finally {
     $('#submit-btn').disabled = false;
     $('#submit-btn').textContent = '丟出精靈球 ⚪';

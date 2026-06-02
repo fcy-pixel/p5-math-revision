@@ -123,7 +123,7 @@ export async function generateQuestion(topic, difficulty) {
       { role: 'system', content: sys },
       { role: 'user', content: user },
     ],
-    { temperature: 0.9 }
+    { temperature: 0.9, model: 'qwen-turbo', max_tokens: 500 }
   );
   if (!q.question) throw new Error('AI 未能出題，請再試一次');
   return q;
