@@ -8,11 +8,11 @@ function getKey() {
   return (localStorage.getItem('qwen_api_key') || '').trim();
 }
 
-async function callQwen(messages, { temperature = 0.7, json_mode = false } = {}) {
+async function callQwen(messages, { temperature = 0.7, json_mode = false, model, max_tokens } = {}) {
   const resp = await fetch(API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages, temperature, json_mode, apiKey: getKey() }),
+    body: JSON.stringify({ messages, temperature, json_mode, model, max_tokens, apiKey: getKey() }),
   });
   const data = await resp.json();
   if (!resp.ok) throw new Error(data.error || `伺服器錯誤 (${resp.status})`);
@@ -150,7 +150,7 @@ export async function gradeAnswer(topic, question, studentAnswer) {
       { role: 'system', content: sys },
       { role: 'user', content: user },
     ],
-    { temperature: 0.2 }
+    { temperature: 0.2, model: 'qwen-turbo', max_tokens: 400 }
   );
   return {
     correct: !!r.correct,

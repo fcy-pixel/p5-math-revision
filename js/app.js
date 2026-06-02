@@ -130,23 +130,64 @@ function renderAnswerInput(q) {
   });
 }
 
+// 把答案字串轉成數值（支援整數、小數、分數 a/b、帶分數 a 又 b/c），失敗回 null
+function parseNum(str) {
+  if (str == null) return null;
+  let s = String(str).replace(/[^\d./又\s-]/g, ' ').trim(); // 去掉「克、顆、人、公斤」等單位
+  let m = s.match(/^(-?\d+)\s*又\s*(\d+)\/(\d+)$/);          // 帶分數 a 又 b/c
+  if (m) { const w = +m[1], n = +m[2], d = +m[3]; return d ? Math.sign(w || 1) * (Math.abs(w) + n / d) : null; }
+  m = s.match(/^(-?\d+)\s+(\d+)\/(\d+)$/);                   // 帶分數 a b/c（空格）
+  if (m) { const w = +m[1], n = +m[2], d = +m[3]; return d ? Math.sign(w || 1) * (Math.abs(w) + n / d) : null; }
+  m = s.match(/^(-?\d+)\/(\d+)$/);                           // 分數 a/b
+  if (m) return +m[2] ? +m[1] / +m[2] : null;
+  m = s.match(/^-?\d+(?:\.\d+)?$/);                          // 整數或小數
+  if (m) return parseFloat(s);
+  return null;
+}
+
+// 本地即時批改：兩邊都能轉成數值才判斷，否則回 null（交給 AI）
+function localGrade(studentStr, answerStr) {
+  const a = parseNum(studentStr), b = parseNum(answerStr);
+  if (a === null || b === null) return null;
+  return Math.abs(a - b) < 1e-6;
+}
+
 // ---------- 丟精靈球（批改） ----------
 async function submitAnswer() {
   if (game.answered || !game.question) return;
   const ans = ($('#ans-input')?.value || '').trim();
   if (!ans) { flashHint('先輸入答案，再丟精靈球！'); return; }
 
+  // 1) 本地即時批改（數值題）——零等待
+  const local = localGrade(ans, game.question.answer);
+  if (local !== null) {
+    game.answered = true;
+    $('#monster-emoji').classList.remove('shake');
+    applyResult({
+      correct: local,
+      feedback: local ? '計算正確，做得好！' : `正確答案是 ${game.question.answer}，看看下面的解法。`,
+      solution: game.question.solution || '',
+    });
+    return;
+  }
+
+  // 2) 無法本地判斷（如文字題）→ 用 AI（較快的模型）批改
   $('#submit-btn').disabled = true;
   $('#submit-btn').textContent = '丟出精靈球…';
   $('#monster-emoji').classList.add('shake');
-
   try {
     const r = await gradeAnswer(game.topic, game.question, ans);
     game.answered = true;
     applyResult(r);
   } catch (e) {
-    flashHint(`對戰出錯：${e.message}`);
+    // AI 一時繁忙：友善退場，顯示參考答案，不扣難度
+    game.answered = true;
     $('#monster-emoji').classList.remove('shake');
+    applyResult({
+      neutral: true,
+      feedback: 'AI 老師一時繁忙，先看看參考答案吧！',
+      solution: `參考答案：${game.question.answer || ''}\n${game.question.solution || ''}`,
+    });
   } finally {
     $('#submit-btn').disabled = false;
     $('#submit-btn').textContent = '丟出精靈球 ⚪';
@@ -160,27 +201,30 @@ function applyResult(r) {
   const mon = game.monster;
   $('#monster-emoji').classList.remove('shake');
 
-  if (r.correct) {
-    gp.caught += 1;
-    gp.totalCaught += 1;
-    gp.streak += 1;
-    if (gp.streak >= 2 && gp.difficulty < 5) { gp.difficulty += 1; gp.streak = 0; }
-    $('#monster-emoji').classList.add('caught');
-  } else {
-    gp.streak = 0;
-    if (gp.difficulty > 1) gp.difficulty -= 1;
-    $('#monster-emoji').classList.add('flee');
+  let wonBadge = false;
+  if (!r.neutral) {
+    if (r.correct) {
+      gp.caught += 1;
+      gp.totalCaught += 1;
+      gp.streak += 1;
+      if (gp.streak >= 2 && gp.difficulty < 5) { gp.difficulty += 1; gp.streak = 0; }
+      $('#monster-emoji').classList.add('caught');
+    } else {
+      gp.streak = 0;
+      if (gp.difficulty > 1) gp.difficulty -= 1;
+      $('#monster-emoji').classList.add('flee');
+    }
+    wonBadge = r.correct && gp.caught >= CATCH_GOAL && !gp.badge;
+    if (r.correct && gp.caught >= CATCH_GOAL) gp.badge = true;
+    setGymProgress(t.id, gp);
   }
-
-  const wonBadge = r.correct && gp.caught >= CATCH_GOAL && !gp.badge;
-  if (r.correct && gp.caught >= CATCH_GOAL) gp.badge = true;
-  setGymProgress(t.id, gp);
   updateBadgeBar(gp);
 
+  const headTxt = r.neutral ? `🤝 ${mon.n} 跟你打成平手` : (r.correct ? `✨ 收服了 ${mon.n}！` : `💨 ${mon.n} 逃走了…`);
   const fb = $('#q-feedback');
-  fb.className = 'feedback ' + (r.correct ? 'correct' : 'wrong');
+  fb.className = 'feedback ' + (r.neutral ? 'neutral' : (r.correct ? 'correct' : 'wrong'));
   fb.innerHTML = `
-    <div class="fb-head">${r.correct ? `✨ 收服了 ${mon.n}！` : `💨 ${mon.n} 逃走了…`}</div>
+    <div class="fb-head">${headTxt}</div>
     <div class="fb-text">${mathHTML(r.feedback)}</div>
     ${r.solution ? `<details class="fb-sol" ${r.correct ? '' : 'open'}><summary>看精靈的招式（解法）</summary><div>${mathHTML(r.solution)}</div></details>` : ''}
     <div class="fb-adjust">下一隻精靈 Lv.${gp.difficulty}</div>`;

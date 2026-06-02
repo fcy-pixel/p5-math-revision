@@ -23,16 +23,17 @@ export async function onRequestPost(context) {
   const { request, env } = context;
   try {
     const body = await request.json();
-    const { messages, apiKey: clientKey, temperature, json_mode } = body;
+    const { messages, apiKey: clientKey, temperature, json_mode, model, max_tokens } = body;
 
     const apiKey = (clientKey && clientKey.trim()) || env.QWEN_API_KEY;
     if (!apiKey) return json({ error: '請先在設定中輸入 Qwen API Key' }, 400);
     if (!messages || !Array.isArray(messages)) return json({ error: '無效的請求格式' }, 400);
 
+    const ALLOWED_MODELS = new Set(['qwen-plus', 'qwen-turbo', 'qwen-flash', 'qwen-max']);
     const payload = {
-      model: 'qwen-plus',
+      model: ALLOWED_MODELS.has(model) ? model : 'qwen-plus',
       messages,
-      max_tokens: 900,
+      max_tokens: Number.isInteger(max_tokens) ? max_tokens : 900,
       temperature: typeof temperature === 'number' ? temperature : 0.7,
       top_p: 0.9,
     };
