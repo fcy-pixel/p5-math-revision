@@ -103,7 +103,7 @@ async function spawnMonster() {
   try {
     const q = await generateQuestion(t, gp.difficulty);
     game.question = q;
-    $('#q-text').textContent = q.question;
+    $('#q-text').innerHTML = mathHTML(q.question);
     renderAnswerInput(q);
   } catch (e) {
     $('#q-text').innerHTML = `<span class="error">出招失敗：${e.message}</span>`;
@@ -116,9 +116,15 @@ async function spawnMonster() {
 function renderAnswerInput(q) {
   const area = $('#answer-area');
   area.innerHTML =
-    '<input id="ans-input" class="text-input" type="text" autocomplete="off" placeholder="輸入答案丟出精靈球，例如 3/4 或 12 克" />';
+    '<input id="ans-input" class="text-input" type="text" autocomplete="off" placeholder="輸入答案，例如 3/4 代表四分之三、或 12 克" />' +
+    '<div id="ans-preview" class="ans-preview"></div>';
   const input = $('#ans-input');
+  const preview = $('#ans-preview');
   input.focus();
+  input.addEventListener('input', () => {
+    const v = input.value.trim();
+    preview.innerHTML = /\d\/\d/.test(v) ? `你的答案：${mathHTML(v)}` : '';
+  });
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !game.answered) submitAnswer();
   });
@@ -175,8 +181,8 @@ function applyResult(r) {
   fb.className = 'feedback ' + (r.correct ? 'correct' : 'wrong');
   fb.innerHTML = `
     <div class="fb-head">${r.correct ? `✨ 收服了 ${mon.n}！` : `💨 ${mon.n} 逃走了…`}</div>
-    <div class="fb-text">${escapeHtml(r.feedback)}</div>
-    ${r.solution ? `<details class="fb-sol" ${r.correct ? '' : 'open'}><summary>看精靈的招式（解法）</summary><div>${escapeHtml(r.solution)}</div></details>` : ''}
+    <div class="fb-text">${mathHTML(r.feedback)}</div>
+    ${r.solution ? `<details class="fb-sol" ${r.correct ? '' : 'open'}><summary>看精靈的招式（解法）</summary><div>${mathHTML(r.solution)}</div></details>` : ''}
     <div class="fb-adjust">下一隻精靈 Lv.${gp.difficulty}</div>`;
 
   $('#submit-btn').classList.add('hidden');
@@ -204,7 +210,7 @@ function showBadge(t) {
 function showHint() {
   if (!game.question) return;
   const h = game.question.hint || '把題目拆成小步，先做乘除，再做加減。';
-  $('#hint-box').innerHTML = `💡 <b>精靈弱點（提示）：</b>${escapeHtml(h)}`;
+  $('#hint-box').innerHTML = `💡 <b>精靈弱點（提示）：</b>${mathHTML(h)}`;
 }
 function flashHint(msg) {
   $('#hint-box').innerHTML = `⚠️ ${escapeHtml(msg)}`;
@@ -216,7 +222,7 @@ function appendProf(role, text, pending = false) {
   const log = $('#prof-log');
   const div = document.createElement('div');
   div.className = `bubble ${role}${pending ? ' pending' : ''}`;
-  div.innerHTML = escapeHtml(text).replace(/\n/g, '<br>');
+  div.innerHTML = mathHTML(text);
   log.appendChild(div);
   log.scrollTop = log.scrollHeight;
   return div;
@@ -232,7 +238,7 @@ async function sendProf() {
   try {
     const reply = await askTutor(profHistory, game.topic?.name);
     pending.classList.remove('pending');
-    pending.innerHTML = escapeHtml(reply).replace(/\n/g, '<br>');
+    pending.innerHTML = mathHTML(reply);
     profHistory.push({ role: 'assistant', content: reply });
     $('#prof-log').scrollTop = $('#prof-log').scrollHeight;
   } catch (e) {
@@ -266,6 +272,18 @@ async function updateKeyBanner() {
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// 把純文字數式轉成 HTML：a/b → 直式分數（分子在上、分數線、分母在下）
+function fracHTML(n, d) {
+  return `<span class="frac"><span class="num">${n}</span><span class="den">${d}</span></span>`;
+}
+function mathHTML(raw) {
+  let s = escapeHtml(String(raw));
+  // 帶分數「2 又 1/3」與一般分數「a/b」一次過處理（帶分數優先）
+  s = s.replace(/(\d+)\s*又\s*(\d+)\/(\d+)|(\d+)\/(\d+)/g,
+    (m, w, mn, md, n, d) => (w !== undefined ? `${w}${fracHTML(mn, md)}` : fracHTML(n, d)));
+  return s.replace(/\n/g, '<br>');
 }
 
 // ---------- 綁定 ----------
