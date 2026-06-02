@@ -235,16 +235,15 @@ function applyResult(r) {
   $('#monster-emoji').classList.remove('shake');
 
   let wonBadge = false;
+  const prevDiff = gp.difficulty;
   if (!r.neutral) {
     if (r.correct) {
       gp.caught += 1;
       gp.totalCaught += 1;
-      gp.streak += 1;
-      if (gp.streak >= 2 && gp.difficulty < 5) { gp.difficulty += 1; gp.streak = 0; }
+      if (gp.difficulty < 5) gp.difficulty += 1; // 答對即升一級，出難一點
       $('#monster-emoji').classList.add('caught');
     } else {
-      gp.streak = 0;
-      if (gp.difficulty > 1) gp.difficulty -= 1;
+      if (gp.difficulty > 1) gp.difficulty -= 1; // 答錯即降一級，出易一點
       $('#monster-emoji').classList.add('flee');
     }
     wonBadge = r.correct && gp.caught >= CATCH_GOAL && !gp.badge;
@@ -260,7 +259,7 @@ function applyResult(r) {
     <div class="fb-head">${headTxt}</div>
     <div class="fb-text">${mathHTML(r.feedback)}</div>
     ${r.solution ? `<details class="fb-sol" ${r.correct ? '' : 'open'}><summary>看精靈的招式（解法）</summary><div>${mathHTML(r.solution)}</div></details>` : ''}
-    <div class="fb-adjust">下一隻精靈 Lv.${gp.difficulty}</div>`;
+    <div class="fb-adjust">${gp.difficulty > prevDiff ? '難度提升 ⬆️ ' : (gp.difficulty < prevDiff ? '難度降低 ⬇️ ' : '')}下一隻精靈 Lv.${gp.difficulty}</div>`;
 
   $('#submit-btn').classList.add('hidden');
   $('#next-btn').classList.remove('hidden');
