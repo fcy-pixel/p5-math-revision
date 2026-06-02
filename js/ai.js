@@ -26,18 +26,58 @@ function sanitizeEscapes(s) {
   return s.replace(/\\(?![\\"/bfnrtu])/g, '');
 }
 
-// 容錯地從文字中抽出 JSON 物件
+// 把字串值內的「裸控制字元」（真換行/Tab）轉成合法轉義，避免 JSON.parse 報錯
+function escapeRawControls(s) {
+  let out = '', inStr = false, esc = false;
+  for (const ch of s) {
+    if (esc) { out += ch; esc = false; continue; }
+    if (ch === '\\') { out += ch; esc = true; continue; }
+    if (ch === '"') { inStr = !inStr; out += ch; continue; }
+    if (inStr) {
+      const code = ch.charCodeAt(0);
+      if (code < 0x20) { out += ({ 10: '\\n', 13: '\\r', 9: '\\t' }[code]) || ' '; continue; }
+    }
+    out += ch;
+  }
+  return out;
+}
+
+// 去掉物件／陣列尾端多餘逗號
+function stripTrailingCommas(s) {
+  return s.replace(/,(\s*[}\]])/g, '$1');
+}
+
+// 容錯地從文字中抽出 JSON 物件（多重清理後逐一嘗試）
 function parseJSON(text) {
   let t = String(text).trim();
-  // 去掉 ```json ... ``` 圍欄
-  t = t.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
-  // 只取第一個 {...} 區塊
-  const m = t.match(/\{[\s\S]*\}/);
+  t = t.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, ''); // 去掉 ``` 圍欄
+  const m = t.match(/\{[\s\S]*\}/);                              // 只取第一個 {...}
   if (m) t = m[0];
-  for (const cand of [t, sanitizeEscapes(t)]) {
+
+  const candidates = [
+    t,
+    escapeRawControls(t),
+    sanitizeEscapes(escapeRawControls(t)),
+    stripTrailingCommas(sanitizeEscapes(escapeRawControls(t))),
+  ];
+  for (const cand of candidates) {
     try { return JSON.parse(cand); } catch { /* try next */ }
   }
   throw new Error('AI 回覆格式不正確，請再試一次');
+}
+
+// 呼叫 Qwen 並解析 JSON；失敗時自動重試（預設多試 1 次）
+async function callQwenJSON(messages, opts = {}, retries = 1) {
+  let lastErr;
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const text = await callQwen(messages, { json_mode: true, ...opts });
+      return parseJSON(text);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr;
 }
 
 const DIFF_WORDS = ['', '很基礎', '基礎', '中等', '稍具挑戰', '挑戰'];
@@ -78,14 +118,13 @@ export async function generateQuestion(topic, difficulty) {
       : '') +
     formatHint;
 
-  const text = await callQwen(
+  const q = await callQwenJSON(
     [
       { role: 'system', content: sys },
       { role: 'user', content: user },
     ],
-    { temperature: 0.9, json_mode: true }
+    { temperature: 0.9 }
   );
-  const q = parseJSON(text);
   if (!q.question) throw new Error('AI 未能出題，請再試一次');
   return q;
 }
@@ -106,14 +145,13 @@ export async function gradeAnswer(topic, question, studentAnswer) {
     `課題：${topic.name}\n題目：${question.question}\n標準答案：${question.answer || '（見解說）'}\n` +
     `學生的答案：${studentAnswer}`;
 
-  const text = await callQwen(
+  const r = await callQwenJSON(
     [
       { role: 'system', content: sys },
       { role: 'user', content: user },
     ],
-    { temperature: 0.2, json_mode: true }
+    { temperature: 0.2 }
   );
-  const r = parseJSON(text);
   return {
     correct: !!r.correct,
     feedback: r.feedback || (r.correct ? '答對了！' : '答案不正確。'),
