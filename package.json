@@ -1,0 +1,13 @@
+{
+  "name": "p5-math-revision",
+  "version": "1.0.0",
+  "description": "小五數學溫習 AI — 以 Qwen 做適性出題與批改，支援自主學習",
+  "scripts": {
+    "dev": "wrangler pages dev . --port 8789",
+    "deploy": "wrangler pages deploy . --project-name p5-math-revision",
+    "build": "echo 'Static site, no build required'"
+  },
+  "devDependencies": {
+    "wrangler": "^3.114.17"
+  }
+}

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-HK">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>小五數學溫習 AI ・ 適性自主學習</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">📐 小五數學溫習 <span>AI</span></div>
+    <button id="settings-btn" class="icon-btn" title="設定 API Key">⚙️ 設定</button>
+  </header>
+
+  <div id="key-banner" class="banner hidden">
+    尚未設定 Qwen API Key，AI 出題與批改可能無法使用。
+    <a href="#" id="open-settings-link">前往設定</a>
+  </div>
+
+  <main>
+    <!-- 首頁 -->
+    <section id="view-home" class="view active">
+      <div class="hero">
+        <h1>揀一個課題，開始溫習</h1>
+        <p>AI 老師會按你的表現<strong>自動調整難度</strong>，答對升級、答錯放慢，邊做邊學。</p>
+      </div>
+      <div id="topic-grid" class="topic-grid"></div>
+      <p class="src-note">題目取材自「五年級下學期數學科・總結性評估（六）」課題範圍。</p>
+    </section>
+
+    <!-- 練習 -->
+    <section id="view-practice" class="view">
+      <div class="practice-head">
+        <button class="back-home text-btn">← 返回課題</button>
+        <h2 id="practice-title"></h2>
+        <span id="q-difficulty" class="badge"></span>
+      </div>
+
+      <div class="card q-card">
+        <div id="q-text" class="q-text"></div>
+        <div id="answer-area" class="answer-area"></div>
+        <div id="hint-box" class="hint-box"></div>
+        <div class="q-actions">
+          <button id="hint-btn" class="text-btn">💡 提示</button>
+          <button id="submit-btn" class="primary-btn">提交答案</button>
+          <button id="next-btn" class="primary-btn hidden">下一題 →</button>
+        </div>
+        <div id="q-feedback" class="feedback"></div>
+      </div>
+
+      <!-- AI 老師 -->
+      <div class="card tutor-card">
+        <div class="tutor-head">🧑‍🏫 問老師 <small>（正在溫習：<span id="tutor-topic"></span>）</small></div>
+        <div id="tutor-log" class="tutor-log">
+          <div class="bubble assistant">有不明白的地方？隨時問我，例如「點解角柱嘅截面同底面一樣？」</div>
+        </div>
+        <div class="tutor-input-row">
+          <textarea id="tutor-input" rows="1" placeholder="輸入你的問題，按 Enter 發送"></textarea>
+          <button id="tutor-send" class="primary-btn">發送</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 設定 Modal -->
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-box">
+      <h3>設定 Qwen API Key</h3>
+      <p class="modal-note">
+        於 <a href="https://dashscope.console.aliyun.com/" target="_blank" rel="noopener">阿里雲百煉 / DashScope</a>
+        取得金鑰。Key 只會儲存在你的瀏覽器（localStorage），不會上傳到我們的伺服器以外的地方。
+        若伺服器已設定後備金鑰，這裡可留空。
+      </p>
+      <input id="api-key-input" class="text-input" type="password" placeholder="sk-..." />
+      <div class="modal-actions">
+        <button id="settings-close" class="text-btn">取消</button>
+        <button id="settings-save" class="primary-btn">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
