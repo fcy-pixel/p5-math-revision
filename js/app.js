@@ -226,8 +226,17 @@ function saveSettings() {
   $('#settings-modal').classList.add('hidden');
   updateKeyBanner();
 }
-function updateKeyBanner() {
-  $('#key-banner').classList.toggle('hidden', hasKey());
+async function updateKeyBanner() {
+  // 有前端 key 就一定 OK；否則問伺服器有沒有後備 key
+  let ok = hasKey();
+  if (!ok) {
+    try {
+      const r = await fetch('/api/chat');
+      const d = await r.json();
+      ok = !!d.hasServerKey;
+    } catch { /* 網絡問題就保守顯示提示 */ }
+  }
+  $('#key-banner').classList.toggle('hidden', ok);
 }
 
 // ---------- 工具 ----------

@@ -75,6 +75,11 @@ export async function onRequestPost(context) {
   }
 }
 
+// 健康檢查：回報伺服器是否已設定後備金鑰（不會呼叫 Qwen，不會洩漏金鑰本身）
+export async function onRequestGet(context) {
+  return json({ hasServerKey: !!context.env.QWEN_API_KEY });
+}
+
 export async function onRequestOptions() {
   return new Response(null, { status: 204, headers: corsHeaders });
 }
