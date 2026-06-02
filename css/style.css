@@ -72,7 +72,7 @@ main { max-width: 900px; margin: 0 auto; padding: 22px 16px 60px; }
   font-family: inherit; color: inherit;
 }
 .gym-card:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(31,42,68,.16); border-color: var(--accent); }
-.gym-leader { font-size: 46px; line-height: 1; filter: drop-shadow(0 3px 4px rgba(0,0,0,.15)); }
+.gym-leader { width: 54px; height: 54px; flex: 0 0 54px; filter: drop-shadow(0 3px 4px rgba(0,0,0,.18)); }
 .gym-body { flex: 1; }
 .gym-name { font-size: 18px; font-weight: 800; }
 .gym-name .earned { font-size: 16px; }
@@ -95,7 +95,9 @@ main { max-width: 900px; margin: 0 auto; padding: 22px 16px 60px; }
 /* Monster panel */
 .monster-card { display: flex; align-items: center; gap: 18px;
   background: linear-gradient(135deg, #fff 60%, #fff7d6); border-color: var(--accent); }
-.monster-emoji { font-size: 64px; line-height: 1; }
+.monster-emoji { width: 80px; height: 80px; flex: 0 0 80px; animation: bob 2.2s ease-in-out infinite; }
+.px-sprite { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+@keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
 .monster-emoji.shake { animation: shake .5s ease infinite; }
 .monster-emoji.caught { animation: caught .6s ease forwards; }
 .monster-emoji.flee { animation: flee .6s ease forwards; }

@@ -2,7 +2,8 @@
  * app.js — 數學大冒險（Pokémon 風）
  * 答對 = 收服野生精靈，集滿就贏得道館徽章；難度會適性調整。
  */
-import { TOPICS, TOPIC_BY_ID, randomMonster } from './topics.js';
+import { TOPICS, TOPIC_BY_ID } from './topics.js';
+import { randomMonster, spriteSVG } from './sprites.js';
 import { generateQuestion, gradeAnswer, askTutor, hasKey } from './ai.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -50,7 +51,7 @@ function renderMap() {
     const card = document.createElement('button');
     card.className = 'gym-card';
     card.innerHTML = `
-      <div class="gym-leader">${t.leader}</div>
+      <div class="gym-leader">${spriteSVG(t.leader)}</div>
       <div class="gym-body">
         <div class="gym-name">${t.icon} ${t.gym} ${gp.badge ? '<span class="earned">🎖️</span>' : ''}</div>
         <div class="gym-blurb">${t.blurb}</div>
@@ -93,7 +94,7 @@ async function spawnMonster() {
   $('#submit-btn').classList.remove('hidden');
   updateBadgeBar(gp);
 
-  $('#monster-emoji').textContent = game.monster.e;
+  $('#monster-emoji').innerHTML = spriteSVG(game.monster.id);
   $('#monster-emoji').classList.remove('shake', 'caught', 'flee');
   $('#monster-name').textContent = `野生的 ${game.monster.n} 出現了！`;
   $('#monster-lv').textContent = `Lv.${gp.difficulty}`;

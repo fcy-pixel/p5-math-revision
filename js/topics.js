@@ -10,7 +10,7 @@ export const TOPICS = [
     name: '分數計算',
     gym: '分數道館',
     icon: '➗',
-    leader: '🐉',
+    leader: 'dragon',
     blurb: '分數乘整數、連加減、四則混合與括號運算',
     objectives: [
       '分數乘以整數，並化成最簡分數或帶分數',
@@ -25,7 +25,7 @@ export const TOPICS = [
     name: '分數應用題',
     gym: '應用題道館',
     icon: '📝',
-    leader: '🦅',
+    leader: 'owl',
     blurb: '重量、人數、分數增減的文字題',
     objectives: [
       '用分數表示「佔全部的幾分之幾」並求數量',
@@ -43,17 +43,3 @@ export const TOPICS = [
 ];
 
 export const TOPIC_BY_ID = Object.fromEntries(TOPICS.map((t) => [t.id, t]));
-
-// 野生精靈圖鑑（emoji + 名稱），出題時隨機抽一隻當對手
-export const MONSTERS = [
-  { e: '🔥', n: '火尾蜥' }, { e: '💧', n: '水泡蛙' }, { e: '🌿', n: '草苗獸' },
-  { e: '⚡', n: '電氣鼠' }, { e: '🐲', n: '小飛龍' }, { e: '🦊', n: '燄尾狐' },
-  { e: '🦉', n: '智慧鴞' }, { e: '🐢', n: '盾甲龜' }, { e: '🦇', n: '夜翼蝠' },
-  { e: '⭐', n: '星之子' }, { e: '🍄', n: '蘑菇怪' }, { e: '🦖', n: '岩牙龍' },
-  { e: '🐙', n: '八爪精' }, { e: '🦋', n: '彩翅蝶' }, { e: '🐺', n: '月嚎狼' },
-  { e: '👻', n: '幽靈球' }, { e: '🦔', n: '針刺鼠' }, { e: '🐧', n: '冰原企' },
-];
-
-export function randomMonster() {
-  return MONSTERS[Math.floor(Math.random() * MONSTERS.length)];
-}
