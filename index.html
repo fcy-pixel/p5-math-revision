@@ -3,14 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>小五數學溫習 AI ・ 適性自主學習</title>
+  <title>數學大冒險 ・ 分數訓練師</title>
   <link rel="stylesheet" href="css/style.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">📐 小五數學溫習 <span>AI</span></div>
-    <button id="settings-btn" class="icon-btn" title="設定 API Key">⚙️ 設定</button>
+    <div class="brand">⚡ 數學大冒險 <span>分數訓練師</span></div>
+    <button id="settings-btn" class="icon-btn" title="設定 API Key">⚙️</button>
   </header>
 
   <div id="key-banner" class="banner hidden">
@@ -19,58 +18,80 @@
   </div>
 
   <main>
-    <!-- 首頁 -->
-    <section id="view-home" class="view active">
+    <!-- 地圖（首頁） -->
+    <section id="view-map" class="view active">
       <div class="hero">
-        <h1>揀一個課題，開始溫習</h1>
-        <p>AI 老師會按你的表現<strong>自動調整難度</strong>，答對升級、答錯放慢，邊做邊學。</p>
+        <h1>🧢 成為最強分數訓練師！</h1>
+        <p>挑戰道館、收服野生精靈，答對數學題就能捉到牠！答對自動升級，答錯放慢再來。</p>
+        <div class="trainer-stats">
+          <span>🎖️ 徽章 <b id="trainer-badges">0</b></span>
+          <span>⚪ 已收服 <b id="trainer-caught">0</b> 隻</span>
+        </div>
       </div>
-      <div id="topic-grid" class="topic-grid"></div>
-      <p class="src-note">題目取材自「五年級下學期數學科・總結性評估（六）」課題範圍。</p>
+      <div id="gym-grid" class="gym-grid"></div>
+      <p class="src-note">題目取材自「五年級下學期數學科・總結性評估（六）」的分數課題。</p>
     </section>
 
-    <!-- 練習 -->
-    <section id="view-practice" class="view">
-      <div class="practice-head">
-        <button class="back-home text-btn">← 返回課題</button>
-        <h2 id="practice-title"></h2>
-        <span id="q-difficulty" class="badge"></span>
+    <!-- 對戰 -->
+    <section id="view-battle" class="view">
+      <div class="battle-head">
+        <button class="back-map text-btn">← 回到地圖</button>
+        <h2 id="gym-title"></h2>
       </div>
 
+      <!-- 精靈面板 -->
+      <div class="card monster-card">
+        <div id="monster-emoji" class="monster-emoji">❓</div>
+        <div class="monster-info">
+          <div id="monster-name" class="monster-name"></div>
+          <div id="monster-lv" class="badge"></div>
+          <div id="badge-progress" class="badge-progress"></div>
+        </div>
+      </div>
+
+      <!-- 題目 -->
       <div class="card q-card">
         <div id="q-text" class="q-text"></div>
         <div id="answer-area" class="answer-area"></div>
         <div id="hint-box" class="hint-box"></div>
         <div class="q-actions">
           <button id="hint-btn" class="text-btn">💡 提示</button>
-          <button id="submit-btn" class="primary-btn">提交答案</button>
-          <button id="next-btn" class="primary-btn hidden">下一題 →</button>
+          <button id="submit-btn" class="primary-btn">丟出精靈球 ⚪</button>
+          <button id="next-btn" class="primary-btn hidden">繼續冒險 →</button>
         </div>
         <div id="q-feedback" class="feedback"></div>
       </div>
 
-      <!-- AI 老師 -->
-      <div class="card tutor-card">
-        <div class="tutor-head">🧑‍🏫 問老師 <small>（正在溫習：<span id="tutor-topic"></span>）</small></div>
-        <div id="tutor-log" class="tutor-log">
-          <div class="bubble assistant">有不明白的地方？隨時問我，例如「點解角柱嘅截面同底面一樣？」</div>
+      <!-- 博士求助 -->
+      <div class="card prof-card">
+        <div class="prof-head">🧑‍🔬 博士求助 <small>（道館：<span id="prof-topic"></span>）</small></div>
+        <div id="prof-log" class="prof-log">
+          <div class="bubble assistant">我是數學博士！唔識做就問我，例如「點樣通分？」我會教你。</div>
         </div>
-        <div class="tutor-input-row">
-          <textarea id="tutor-input" rows="1" placeholder="輸入你的問題，按 Enter 發送"></textarea>
-          <button id="tutor-send" class="primary-btn">發送</button>
+        <div class="prof-input-row">
+          <textarea id="prof-input" rows="1" placeholder="輸入問題，按 Enter 問博士"></textarea>
+          <button id="prof-send" class="primary-btn">問</button>
         </div>
       </div>
     </section>
   </main>
 
-  <!-- 設定 Modal -->
+  <!-- 徽章慶祝 -->
+  <div id="badge-modal" class="modal hidden">
+    <div class="modal-box badge-box">
+      <div class="badge-big">🎖️</div>
+      <p id="badge-text"></p>
+      <button id="badge-ok" class="primary-btn">太好了！</button>
+    </div>
+  </div>
+
+  <!-- 設定 -->
   <div id="settings-modal" class="modal hidden">
     <div class="modal-box">
       <h3>設定 Qwen API Key</h3>
       <p class="modal-note">
         於 <a href="https://dashscope.console.aliyun.com/" target="_blank" rel="noopener">阿里雲百煉 / DashScope</a>
-        取得金鑰。Key 只會儲存在你的瀏覽器（localStorage），不會上傳到我們的伺服器以外的地方。
-        若伺服器已設定後備金鑰，這裡可留空。
+        取得金鑰，只會存在你的瀏覽器。若伺服器已設後備金鑰，可留空。
       </p>
       <input id="api-key-input" class="text-input" type="password" placeholder="sk-..." />
       <div class="modal-actions">

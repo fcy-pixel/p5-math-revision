@@ -21,17 +21,23 @@ async function callQwen(messages, { temperature = 0.7, json_mode = false } = {})
   return content;
 }
 
+// 移除 JSON 字串中不合法的反斜線轉義（如 LaTeX \frac、\( 會令 JSON.parse 失敗）
+function sanitizeEscapes(s) {
+  return s.replace(/\\(?![\\"/bfnrtu])/g, '');
+}
+
 // 容錯地從文字中抽出 JSON 物件
 function parseJSON(text) {
-  try {
-    return JSON.parse(text);
-  } catch {
-    const m = text.match(/\{[\s\S]*\}/);
-    if (m) {
-      try { return JSON.parse(m[0]); } catch { /* fallthrough */ }
-    }
-    throw new Error('AI 回覆格式不正確，請再試一次');
+  let t = String(text).trim();
+  // 去掉 ```json ... ``` 圍欄
+  t = t.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  // 只取第一個 {...} 區塊
+  const m = t.match(/\{[\s\S]*\}/);
+  if (m) t = m[0];
+  for (const cand of [t, sanitizeEscapes(t)]) {
+    try { return JSON.parse(cand); } catch { /* try next */ }
   }
+  throw new Error('AI 回覆格式不正確，請再試一次');
 }
 
 const DIFF_WORDS = ['', '很基礎', '基礎', '中等', '稍具挑戰', '挑戰'];
@@ -67,6 +73,9 @@ export async function generateQuestion(topic, difficulty) {
     `學習重點：${topic.objectives.join('；')}\n` +
     `參考例題（請勿照抄，要出新的）：${topic.samples.join(' / ')}\n` +
     `難度：第 ${difficulty} 級（${level}）。難度越高，數字越複雜或步驟越多。\n` +
+    (topic.theme
+      ? '題目情境請圍繞「精靈訓練員的冒險」（例如捉精靈、精靈球、道館、徽章、樹果），令小學生覺得有趣。\n'
+      : '') +
     formatHint;
 
   const text = await callQwen(
