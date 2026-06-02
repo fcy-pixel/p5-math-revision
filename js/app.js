@@ -5,6 +5,7 @@
 import { TOPICS, TOPIC_BY_ID } from './topics.js';
 import { randomMonster, spriteSVG } from './sprites.js';
 import { generateQuestion, gradeAnswer, askTutor, hasKey } from './ai.js';
+import { genFraction } from './fracgen.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -28,6 +29,30 @@ function setGymProgress(id, gp) {
 
 // ---------- 狀態 ----------
 let game = { topic: null, question: null, answered: false, monster: null };
+
+// ---------- 出題來源（本地即時 + AI 預取） ----------
+let prefetched = null; // { topicId, difficulty, promise }
+
+function startPrefetch(topic, difficulty) {
+  if (!topic || topic.id === 'fraction-calc') return; // 本地題免預取
+  prefetched = {
+    topicId: topic.id,
+    difficulty,
+    promise: generateQuestion(topic, difficulty).catch(() => null),
+  };
+}
+
+async function takeQuestion(topic, difficulty) {
+  if (topic.id === 'fraction-calc') return genFraction(difficulty); // 本地、零等待
+  if (prefetched && prefetched.topicId === topic.id && prefetched.difficulty === difficulty) {
+    const p = prefetched.promise;
+    prefetched = null;
+    const q = await p;
+    if (q) return q; // 預取命中：通常已備好，立即可用
+  }
+  prefetched = null;
+  return generateQuestion(topic, difficulty);
+}
 
 // ---------- 畫面切換 ----------
 function show(view) {
@@ -101,7 +126,7 @@ async function spawnMonster() {
   $('#q-text').innerHTML = '<span class="loading">精靈正在出招…</span>';
 
   try {
-    const q = await generateQuestion(t, gp.difficulty);
+    const q = await takeQuestion(t, gp.difficulty);
     game.question = q;
     $('#q-text').innerHTML = mathHTML(q.question);
     renderAnswerInput(q);
@@ -233,6 +258,9 @@ function applyResult(r) {
   $('#next-btn').classList.remove('hidden');
   $('#next-btn').textContent = '繼續冒險 →';
   $('#next-btn').focus();
+
+  // 趁學生看回饋時，背景預先準備下一題（AI 題用），令「繼續冒險」幾乎即時
+  startPrefetch(t, gp.difficulty);
 
   if (wonBadge) setTimeout(() => showBadge(t), 500);
 }
