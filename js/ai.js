@@ -46,7 +46,9 @@ export async function generateQuestion(topic, difficulty) {
     '請依指定課題與難度，出一條全新、適合小五程度的題目。' +
     '只輸出 JSON 物件，不要任何多餘文字。' +
     '【重要】所有數式用純文字書寫，切勿使用 LaTeX 或 \\frac、\\(、$ 等符號：' +
-    '分數寫成 a/b（例 3/4），帶分數寫成「2 又 1/3」，運算符號用 ×、÷、−、＋。';
+    '分數寫成 a/b（例 3/4），帶分數寫成「2 又 1/3」，運算符號用 ×、÷、−、＋。' +
+    '【寫法】對象是小學生：題目和解說要短、用字淺白，每個步驟一行（用 \\n 分行），' +
+    'hint 一句就夠，solution 最多 3 步、總共少於 60 字。';
 
   let formatHint;
   if (topic.answerType === 'mc') {
@@ -88,7 +90,9 @@ export async function gradeAnswer(topic, question, studentAnswer) {
     '請批改學生的答案，只輸出 JSON 物件。' +
     'JSON 欄位：{"correct":true 或 false,"feedback":"親切具體的回饋，指出對或錯在哪裡","solution":"正確的逐步解法"}。' +
     '答案在數學上等值即當作正確（例如 1/2 與 0.5、3/6；2 1/2 與 5/2）。' +
-    '所有數式用純文字（分數寫成 a/b），切勿使用 LaTeX 或 \\frac、$ 等符號。';
+    '所有數式用純文字（分數寫成 a/b），切勿使用 LaTeX 或 \\frac、$ 等符號。' +
+    '【寫法】對象是小學生：feedback 用一兩句淺白說話、語氣鼓勵；' +
+    'solution 最多 3 步、每步一行（\\n 分行）、總共少於 60 字。';
   const user =
     `課題：${topic.name}\n題目：${question.question}\n標準答案：${question.answer || '（見解說）'}\n` +
     `學生的答案：${studentAnswer}`;
@@ -117,7 +121,7 @@ export async function askTutor(history, topicName) {
     '用淺白、鼓勵的語氣解釋概念，多用例子和分步說明，避免直接給最終答案前先引導學生思考。' +
     (topicName ? `學生現正溫習的課題是「${topicName}」。` : '') +
     '所有數式用純文字（分數寫成 a/b），切勿使用 LaTeX 或 \\frac、$ 等符號。' +
-    '回覆精簡，不超過 250 字。';
+    '【寫法】對象是小學生：用最淺白的字、短句、可分行，整個回覆少於 80 字。';
   return callQwen([{ role: 'system', content: sys }, ...history], { temperature: 0.7 });
 }
 
