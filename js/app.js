@@ -165,23 +165,37 @@ function renderAnswerInput(q) {
 // 把答案字串轉成數值（支援整數、小數、分數 a/b、帶分數 a 又 b/c），失敗回 null
 function parseNum(str) {
   if (str == null) return null;
-  let s = String(str).replace(/[^\d./又\s-]/g, ' ').trim(); // 去掉「克、顆、人、公斤」等單位
-  let m = s.match(/^(-?\d+)\s*又\s*(\d+)\/(\d+)$/);          // 帶分數 a 又 b/c
+  let s = String(str).split(/[（(]/)[0];                     // 去掉「（即 3/2）」這類註解
+  s = s.replace(/[^\d./又\s-]/g, ' ').trim();                // 去掉「克、顆、人、公斤」等單位
+  let m = s.match(/^(-?\d+)\s*又\s*(\d+)\/(\d+)/);           // 帶分數 a 又 b/c
   if (m) { const w = +m[1], n = +m[2], d = +m[3]; return d ? Math.sign(w || 1) * (Math.abs(w) + n / d) : null; }
-  m = s.match(/^(-?\d+)\s+(\d+)\/(\d+)$/);                   // 帶分數 a b/c（空格）
+  m = s.match(/^(-?\d+)\s+(\d+)\/(\d+)/);                    // 帶分數 a b/c（空格）
   if (m) { const w = +m[1], n = +m[2], d = +m[3]; return d ? Math.sign(w || 1) * (Math.abs(w) + n / d) : null; }
-  m = s.match(/^(-?\d+)\/(\d+)$/);                           // 分數 a/b
+  m = s.match(/^(-?\d+)\/(\d+)/);                            // 分數 a/b
   if (m) return +m[2] ? +m[1] / +m[2] : null;
-  m = s.match(/^-?\d+(?:\.\d+)?$/);                          // 整數或小數
-  if (m) return parseFloat(s);
+  m = s.match(/^-?\d+(?:\.\d+)?/);                           // 整數或小數
+  if (m) return parseFloat(m[0]);
   return null;
 }
 
-// 本地即時批改：兩邊都能轉成數值才判斷，否則回 null（交給 AI）
-function localGrade(studentStr, answerStr) {
-  const a = parseNum(studentStr), b = parseNum(answerStr);
-  if (a === null || b === null) return null;
-  return Math.abs(a - b) < 1e-6;
+// 安全評估純算式，直接算出正確答案值（只允許數字與運算符，避免被誤判）
+function evalCalc(expr) {
+  let e = String(expr)
+    .replace(/＋/g, '+').replace(/[−–—]/g, '-').replace(/×/g, '*').replace(/÷/g, '/')
+    .replace(/[＝=].*$/, '').replace(/\s+/g, '');
+  if (!e || !/^[\d.+\-*/()]+$/.test(e)) return null;
+  try { const v = Function('"use strict";return (' + e + ')')(); return typeof v === 'number' && isFinite(v) ? v : null; }
+  catch { return null; }
+}
+
+// 本地裁決對錯（可靠）：計算題用算式評估作標準答案；否則用 AI 給的標準答案；無法判斷回 null
+function localVerdict(topic, q, ans) {
+  const sv = parseNum(ans);
+  if (sv === null) return null;
+  let av = topic.pureCalc ? evalCalc(q.question) : null;
+  if (av === null) av = parseNum(q.answer);
+  if (av === null) return null;
+  return Math.abs(av - sv) < 1e-6;
 }
 
 // ---------- 丟精靈球（批改） ----------
@@ -190,8 +204,8 @@ async function submitAnswer() {
   const ans = ($('#ans-input')?.value || '').trim();
   if (!ans) { flashHint('先輸入答案，再丟精靈球！'); return; }
 
-  // 本地數值比對（即時、可靠）：true/false 代表能判斷，null 代表交給 AI
-  const local = localGrade(ans, game.question.answer);
+  // 本地裁決對錯（可靠、即時）：true/false 代表能判斷，null 代表交給 AI
+  const local = localVerdict(game.topic, game.question, ans);
 
   $('#submit-btn').disabled = true;
   $('#submit-btn').textContent = '丟出精靈球…';
@@ -199,10 +213,14 @@ async function submitAnswer() {
   try {
     // AI 對答案（qwen-turbo）：負責寫回饋與解說
     const r = await gradeAnswer(game.topic, game.question, ans);
-    // 數值題以本地判斷為準（等值更可靠），文字題用 AI 判斷
+    // 對錯以本地裁決為準（等值更可靠，不會把對的當錯）；本地判不到才信 AI
     const correct = local !== null ? local : r.correct;
+    // 回饋：AI 判斷與最終一致才用 AI 文字，否則用一致的本地文字，避免「答對卻說錯」
+    const feedback = (local === null || r.correct === correct)
+      ? r.feedback
+      : (correct ? '計算正確，做得好！' : `正確答案是 ${game.question.answer}，看看下面的解法。`);
     game.answered = true;
-    applyResult({ correct, feedback: r.feedback, solution: r.solution || game.question.solution || '' });
+    applyResult({ correct, feedback, solution: r.solution || game.question.solution || '' });
   } catch (e) {
     game.answered = true;
     $('#monster-emoji').classList.remove('shake');
