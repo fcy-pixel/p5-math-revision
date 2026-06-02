@@ -19,6 +19,8 @@ export const TOPICS = [
     ],
     samples: ['4 × 6/7', '3/4 − 1/6', '2/3 + 1/5 × 10', '(3/4 + 1/2) × 8'],
     answerType: 'short',
+    pureCalc: true, // 出純算式計算題，而非文字應用題
+    varieties: ['同分母加減', '異分母加減', '整數乘分數', '分數乘分數', '先乘除後加減的混合運算', '帶括號的運算'],
   },
   {
     id: 'word-problem',
@@ -39,6 +41,7 @@ export const TOPICS = [
     ],
     answerType: 'short',
     theme: true, // 題目情境可圍繞精靈訓練員的冒險，增加趣味
+    varieties: ['平均分配求重量', '佔全部的幾分之幾求數量', '比原來增加幾分之幾', '比原來減少幾分之幾', '購物與找續', '幾盒共重多少'],
   },
 ];
 

@@ -96,26 +96,29 @@ export async function generateQuestion(topic, difficulty) {
     '【寫法】對象是小學生：題目和解說要短、用字淺白，每個步驟一行（用 \\n 分行），' +
     'hint 一句就夠，solution 最多 3 步、總共少於 60 字。';
 
-  let formatHint;
-  if (topic.answerType === 'mc') {
-    formatHint =
-      `題型為選擇題，學生只會在以下選項中選一個：${JSON.stringify(topic.choices)}。` +
-      'JSON 欄位：{"question":"題目","choices":["可以","不可以"],"answer":"正確選項","hint":"一句提示","solution":"完整解說"}';
-  } else {
-    formatHint =
-      '題型為短答題，學生會輸入一個答案（分數可寫成 a/b，帶分數寫成 a b/c，數量要含單位視乎題目）。' +
-      'JSON 欄位：{"question":"題目","answer":"標準答案","hint":"一句提示","solution":"逐步解說"}';
-  }
+  const formatHint =
+    '題型為短答題，學生會輸入一個答案（分數可寫成 a/b，帶分數寫成 a b/c，數量要含單位視乎題目）。' +
+    'JSON 欄位：{"question":"題目","answer":"標準答案","hint":"一句提示","solution":"逐步解說"}';
+
+  // 注入隨機性，避免每次出同一題
+  const nonce = Math.random().toString(36).slice(2, 8);
+  const varieties = topic.varieties || [];
+  const focus = varieties.length ? varieties[Math.floor(Math.random() * varieties.length)] : '';
 
   const user =
     `課題：${topic.name}\n` +
     `課題說明：${topic.blurb}\n` +
     `學習重點：${topic.objectives.join('；')}\n` +
-    `參考例題（請勿照抄，要出新的）：${topic.samples.join(' / ')}\n` +
+    `參考例題（請勿照抄，要出全新的）：${topic.samples.join(' / ')}\n` +
     `難度：第 ${difficulty} 級（${level}）。難度越高，數字越複雜或步驟越多。\n` +
+    (topic.pureCalc
+      ? '請出「純算式計算題」，直接寫出算式（例如 3/4 ＋ 1/6 或 (2/3 ＋ 1/5) × 6），不要出文字應用題。\n'
+      : '') +
     (topic.theme
       ? '題目情境請圍繞「精靈訓練員的冒險」（例如捉精靈、精靈球、道館、徽章、樹果），令小學生覺得有趣。\n'
       : '') +
+    (focus ? `這次請聚焦這種類型：${focus}。\n` : '') +
+    `重要：每次都要出不同的題目，數字隨機，不要重複常見題目（隨機碼 ${nonce}）。\n` +
     formatHint;
 
   const q = await callQwenJSON(
@@ -123,7 +126,7 @@ export async function generateQuestion(topic, difficulty) {
       { role: 'system', content: sys },
       { role: 'user', content: user },
     ],
-    { temperature: 0.9, model: 'qwen-turbo', max_tokens: 500 }
+    { temperature: 1.0, model: 'qwen-turbo', max_tokens: 500 }
   );
   if (!q.question) throw new Error('AI 未能出題，請再試一次');
   return q;
